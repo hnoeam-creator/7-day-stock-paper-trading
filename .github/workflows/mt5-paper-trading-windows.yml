@@ -45,8 +45,11 @@ jobs:
         with:
           python-version: "3.11"
           architecture: "x64"
+      - name: Configure PowerShell execution policy
+        shell: powershell
+        run: Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process -Force
       - name: Validate required secrets
-        shell: pwsh
+        shell: powershell
         run: |
           $missing = @()
           if (-not $env:MT5_LOGIN) { $missing += "MT5_LOGIN" }
@@ -57,7 +60,7 @@ jobs:
             exit 1
           }
       - name: Create temporary MT5 runtime configuration
-        shell: pwsh
+        shell: powershell
         run: |
           $envPath = "09-API密钥-仅本地/mt5-api.env"
           $content = @()
@@ -67,7 +70,7 @@ jobs:
           if ($env:MT5_PATH) { $content += "MT5_PATH=$env:MT5_PATH" }
           [System.IO.File]::WriteAllLines($envPath, $content, [System.Text.Encoding]::UTF8)
       - name: Validate project files
-        shell: pwsh
+        shell: powershell
         run: |
           python -m json.tool 03-定时任务-routines/schedule.json | Out-Null
           python -m json.tool 04-运行状态-state/readiness.json | Out-Null
@@ -75,7 +78,7 @@ jobs:
           python 06-程序脚本-scripts/mt5_readiness_check.py --check-config
       - name: Run MT5 observation
         id: observation
-        shell: pwsh
+        shell: powershell
         run: |
           $isManual = "${{ github.event_name }}" -eq "workflow_dispatch"
           $args = if ($isManual) { "--manual" } else { "" }
@@ -95,7 +98,7 @@ jobs:
           exit $exitCode
       - name: Write run summary
         if: always()
-        shell: pwsh
+        shell: powershell
         run: |
           $symbol = "${{ github.event.inputs.mt5_symbol }}"
           $result = "${{ steps.observation.outputs.exit_code || 'not-run' }}"
@@ -124,7 +127,7 @@ jobs:
           $summary | Out-File -Encoding utf8 -Append $env:GITHUB_STEP_SUMMARY
       - name: Send optional Telegram notification
         if: always()
-        shell: pwsh
+        shell: powershell
         run: |
           if (-not $env:TELEGRAM_BOT_TOKEN -or -not $env:TELEGRAM_CHAT_ID) {
             Write-Host "Telegram notification not configured; skipping."
@@ -145,7 +148,7 @@ jobs:
           }
       - name: Remove temporary credentials
         if: always()
-        shell: pwsh
+        shell: powershell
         run: |
           Remove-Item -Path "09-API密钥-仅本地/mt5-api.env" -Force -ErrorAction SilentlyContinue
       - name: Upload non-secret run records
@@ -180,18 +183,21 @@ jobs:
         with:
           python-version: "3.11"
           architecture: "x64"
+      - name: Configure PowerShell execution policy
+        shell: powershell
+        run: Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process -Force
       - name: Create temporary MT5 runtime configuration
-        shell: pwsh
+        shell: powershell
         run: |
           $envPath = "09-API密钥-仅本地/mt5-api.env"
           $content = @()
           $content += "MT5_LOGIN=$env:MT5_LOGIN"
-          $content += "MT5_PASSWORD=***
+          $content += "MT5_PASSWORD=$env:M...ORD"
           $content += "MT5_SERVER=$env:MT5_SERVER"
           if ($env:MT5_PATH) { $content += "MT5_PATH=$env:MT5_PATH" }
           [System.IO.File]::WriteAllLines($envPath, $content, [System.Text.Encoding]::UTF8)
       - name: Run paper trading decision
-        shell: pwsh
+        shell: powershell
         run: |
           $decisionPath = "${{ github.event.inputs.decision_file }}"
           if (-not $decisionPath -or -not (Test-Path $decisionPath)) {
@@ -202,7 +208,7 @@ jobs:
           python 06-程序脚本-scripts/paper_engine_mt5.py --decision $decisionPath --run-id $runId
       - name: Remove temporary credentials
         if: always()
-        shell: pwsh
+        shell: powershell
         run: |
           Remove-Item -Path "09-API密钥-仅本地/mt5-api.env" -Force -ErrorAction SilentlyContinue
       - name: Upload paper decision records
