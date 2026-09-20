@@ -18,13 +18,6 @@ def find_dirs(base, prefix):
     pattern = os.path.join(base, f'{prefix}*')
     dirs = glob.glob(pattern)
     return [d for d in dirs if os.path.isdir(d)]
-def list_files_in_dir(directory):
-    """List all files in a directory (non-recursive)."""
-    try:
-        return [f for f in os.listdir(directory) if os.path.isfile(os.path.join(directory, f))]
-    except Exception as e:
-        print(f"Error listing {directory}: {e}")
-        return []
 def find_file_in_dirs(dirs, filename):
     """Find file in list of directories."""
     for d in dirs:
@@ -47,35 +40,17 @@ def main():
     print(f"05- dirs: {dirs_05}")
     print(f"06- dirs: {dirs_06}")
     
-    # List ALL files in 05- and 06- directories for debugging
-    if dirs_05:
-        print(f"\nFiles in 05- directory:")
-        for f in os.listdir(dirs_05[0]):
-            full = os.path.join(dirs_05[0], f)
-            if os.path.isfile(full):
-                print(f"  FILE: {f}")
-            elif os.path.isdir(full):
-                print(f"  DIR:  {f}")
-    
-    if dirs_06:
-        print(f"\nFiles in 06- directory:")
-        for f in os.listdir(dirs_06[0]):
-            full = os.path.join(dirs_06[0], f)
-            if os.path.isfile(full):
-                print(f"  FILE: {f}")
-            elif os.path.isdir(full):
-                print(f"  DIR:  {f}")
-    
-    # Find files
-    dirs_03 = find_dirs(base, '03-')
-    dirs_04 = find_dirs(base, '04-')
-    dirs_05 = find_dirs(base, '05-')
-    dirs_06 = find_dirs(base, '06-')
-    
+    # Find files with CORRECT names
     schedule = find_file_in_dirs(dirs_03, 'schedule.json')
     readiness = find_file_in_dirs(dirs_04, 'readiness.json')
-    current_state = find_file_in_dirs(dirs_05, 'current-state-mt5.json')
+    current_state = find_file_in_dirs(dirs_05, 'current-state.json')  # FIXED
     readiness_check = find_file_in_dirs(dirs_06, 'mt5_readiness_check.py')
+    
+    # If mt5_readiness_check.py not found, try alternatives
+    if not readiness_check:
+        readiness_check = find_file_in_dirs(dirs_06, 'binance_readiness_check.py')
+    if not readiness_check:
+        readiness_check = find_file_in_dirs(dirs_06, 'run_observation.py')
     
     all_ok = True
     for name, filepath in [
