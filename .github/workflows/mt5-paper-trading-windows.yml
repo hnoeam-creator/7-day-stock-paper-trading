@@ -67,7 +67,7 @@ jobs:
           echo MT5_PASSWORD=*** >> "%envPath%"
           echo MT5_SERVER=%MT5_SERVER% >> "%envPath%"
           if not "%MT5_PATH%"=="" echo MT5_PATH=%MT5_PATH% >> "%envPath%"
-- name: Validate project files
+     - name: Validate project files
         shell: powershell
         run: |
           $ws = $env:GITHUB_WORKSPACE
