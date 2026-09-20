@@ -4,12 +4,6 @@ import glob
 import json
 import sys
 import os
-def find_file(pattern):
-    """Find first file matching pattern."""
-    matches = glob.glob(pattern)
-    if not matches:
-        return None
-    return matches[0]
 def validate_json(filepath):
     """Validate JSON file."""
     try:
@@ -19,28 +13,63 @@ def validate_json(filepath):
     except Exception as e:
         print(f"Invalid JSON {filepath}: {e}")
         return False
+def find_dirs(base, prefix):
+    """Find directories starting with prefix."""
+    pattern = os.path.join(base, f'{prefix}*')
+    dirs = glob.glob(pattern)
+    return [d for d in dirs if os.path.isdir(d)]
+def find_file_in_dirs(dirs, filename):
+    """Find file in list of directories."""
+    for d in dirs:
+        filepath = os.path.join(d, filename)
+        if os.path.isfile(filepath):
+            return filepath
+    return None
 def main():
     base = os.getcwd()
+    print(f"Base directory: {base}")
+    
+    # List all directories for debugging
+    all_dirs = glob.glob(os.path.join(base, '*'))
+    dirs_only = [d for d in all_dirs if os.path.isdir(d)]
+    print(f"All directories found: {dirs_only}")
     
     # Find directories by numeric prefix
-    dirs = {
-        'schedule': glob.glob(os.path.join(base, '03-*', 'schedule.json')),
-        'readiness': glob.glob(os.path.join(base, '04-*', 'readiness.json')),
-        'current_state': glob.glob(os.path.join(base, '05-*', 'current-state-mt5.json')),
-        'readiness_check': glob.glob(os.path.join(base, '06-*', 'mt5_readiness_check.py')),
-    }
+    dirs_03 = find_dirs(base, '03-')
+    dirs_04 = find_dirs(base, '04-')
+    dirs_05 = find_dirs(base, '05-')
+    dirs_06 = find_dirs(base, '06-')
+    
+    print(f"03- dirs: {dirs_03}")
+    print(f"04- dirs: {dirs_04}")
+    print(f"05- dirs: {dirs_05}")
+    print(f"06- dirs: {dirs_06}")
+    
+    # Find files
+    schedule = find_file_in_dirs(dirs_03, 'schedule.json')
+    readiness = find_file_in_dirs(dirs_04, 'readiness.json')
+    current_state = find_file_in_dirs(dirs_05, 'current-state-mt5.json')
+    readiness_check = find_file_in_dirs(dirs_06, 'mt5_readiness_check.py')
     
     all_ok = True
-    for name, files in dirs.items():
-        if not files:
-            print(f"NOT FOUND: {name}")
-            all_ok = False
-        else:
-            filepath = files[0]
+    for name, filepath in [
+        ('schedule', schedule),
+        ('readiness', readiness),
+        ('current_state', current_state),
+        ('readiness_check', readiness_check),
+    ]:
+        if filepath:
             print(f"FOUND: {name} -> {filepath}")
             if name != 'readiness_check':
-                if not validate_json(filepath):
+                try:
+                    with open(filepath, 'r', encoding='utf-8') as f:
+                        json.load(f)
+                except Exception as e:
+                    print(f"Invalid JSON {filepath}: {e}")
                     all_ok = False
+        else:
+            print(f"NOT FOUND: {name}")
+            all_ok = False
     
     if all_ok:
         print("All project files validated successfully")
@@ -48,5 +77,16 @@ def main():
     else:
         print("Validation failed")
         sys.exit(1)
+def find_file_in_dirs(dirs, filename):
+    """Find file in list of directories."""
+    for d in dirs:
+        filepath = os.path.join(d, filename)
+        if os.path.isfile(filepath):
+            return filepath
+    return None
 if __name__ == '__main__':
+    import glob
+    import json
+    import sys
+    import os
     main()
