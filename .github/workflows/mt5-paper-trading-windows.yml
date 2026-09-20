@@ -75,6 +75,8 @@ jobs:
       - name: Run MT5 observation
         id: observation
         shell: cmd
+        env:
+          PYTHONIOENCODING: utf-8
         run: |
           set "isManual=%GITHUB_EVENT_NAME%"
           set "args="
@@ -89,6 +91,7 @@ jobs:
           
           echo exit_code=%exitCode% >> %GITHUB_OUTPUT%
           exit /b %exitCode%
+
 
       - name: Write run summary
         if: always()
