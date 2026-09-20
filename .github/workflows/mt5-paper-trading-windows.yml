@@ -40,14 +40,14 @@ jobs:
     steps:
       - name: Check out project
         uses: actions/checkout@v7
+      - name: Configure PowerShell execution policy
+        shell: powershell
+        run: Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
           python-version: "3.11"
           architecture: "x64"
-      - name: Configure PowerShell execution policy
-        shell: powershell
-        run: Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process -Force
       - name: Validate required secrets
         shell: powershell
         run: |
@@ -178,14 +178,14 @@ jobs:
     steps:
       - name: Check out project
         uses: actions/checkout@v7
+      - name: Configure PowerShell execution policy
+        shell: powershell
+        run: Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
           python-version: "3.11"
           architecture: "x64"
-      - name: Configure PowerShell execution policy
-        shell: powershell
-        run: Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process -Force
       - name: Create temporary MT5 runtime configuration
         shell: powershell
         run: |
