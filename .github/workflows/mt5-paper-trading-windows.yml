@@ -41,8 +41,8 @@ jobs:
       - name: Check out project
         uses: actions/checkout@v7
       - name: Configure PowerShell execution policy
-        shell: powershell
-        run: Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
+        shell: cmd
+        run: powershell.exe -ExecutionPolicy Bypass -Command "Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force"
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
@@ -65,7 +65,7 @@ jobs:
           $envPath = "09-API密钥-仅本地/mt5-api.env"
           $content = @()
           $content += "MT5_LOGIN=$env:MT5_LOGIN"
-          $content += "MT5_PASSWORD=$env:M...ORD"
+          $content += "MT5_PASSWORD=***
           $content += "MT5_SERVER=$env:MT5_SERVER"
           if ($env:MT5_PATH) { $content += "MT5_PATH=$env:MT5_PATH" }
           [System.IO.File]::WriteAllLines($envPath, $content, [System.Text.Encoding]::UTF8)
@@ -179,8 +179,8 @@ jobs:
       - name: Check out project
         uses: actions/checkout@v7
       - name: Configure PowerShell execution policy
-        shell: powershell
-        run: Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
+        shell: cmd
+        run: powershell.exe -ExecutionPolicy Bypass -Command "Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force"
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
@@ -192,7 +192,7 @@ jobs:
           $envPath = "09-API密钥-仅本地/mt5-api.env"
           $content = @()
           $content += "MT5_LOGIN=$env:MT5_LOGIN"
-          $content += "MT5_PASSWORD=$env:M...ORD"
+          $content += "MT5_PASSWORD=***
           $content += "MT5_SERVER=$env:MT5_SERVER"
           if ($env:MT5_PATH) { $content += "MT5_PATH=$env:MT5_PATH" }
           [System.IO.File]::WriteAllLines($envPath, $content, [System.Text.Encoding]::UTF8)
