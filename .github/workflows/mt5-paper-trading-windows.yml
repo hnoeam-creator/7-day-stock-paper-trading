@@ -70,7 +70,7 @@ jobs:
       - name: Validate project files
         shell: cmd
         run: |
-          chcp 65001 > nul
+          set PYTHONIOENCODING=utf-8
           python validate_project.py
       - name: Run MT5 observation
         id: observation
