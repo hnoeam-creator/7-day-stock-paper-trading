@@ -70,10 +70,11 @@ jobs:
       - name: Validate project files
         shell: cmd
         run: |
-          python -m json.tool "03-定时任务-routines\schedule.json" | Out-Null
-          python -m json.tool "04-运行状态-state\readiness.json" | Out-Null
-          python -m json.tool "05-交易记录-data\current-state-mt5.json" | Out-Null
+         python -m json.tool "03-定时任务-routines\schedule.json" > nul
+          python -m json.tool "04-运行状态-state\readiness.json" > nul
+          python -m json.tool "05-交易记录-data\current-state-mt5.json" > nul
           python "06-程序脚本-scripts\mt5_readiness_check.py" --check-config
+
       - name: Run MT5 observation
         id: observation
         shell: cmd
