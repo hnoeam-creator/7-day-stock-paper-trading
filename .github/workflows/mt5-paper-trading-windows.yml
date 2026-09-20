@@ -82,7 +82,7 @@ jobs:
           set "symbol=%MT5_SYMBOL%"
           if not "%symbol%"=="" set "args=%args% --symbol %symbol%"
           
-          python "06-程序脚本-scripts\run_observation.py" %args% > observation-output.json 2>&1
+          python "06-程序脚本-scripts\run_observation_mt5.py" %args% > observation-output.json 2>&1
           set "exitCode=%ERRORLEVEL%"
           
           type observation-output.json
