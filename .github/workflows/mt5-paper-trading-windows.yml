@@ -76,25 +76,21 @@ jobs:
           python "06-程序脚本-scripts\mt5_readiness_check.py" --check-config
       - name: Run MT5 observation
         id: observation
-        shell: powershell
+        shell: cmd
         run: |
-          $isManual = "${{ github.event_name }}" -eq "workflow_dispatch"
-          $args = if ($isManual) { "--manual" } else { "" }
-          $symbol = "${{ github.event.inputs.mt5_symbol }}"
-          if ($symbol) { $args += " --symbol $symbol" }
+          set "isManual=%GITHUB_EVENT_NAME%"
+          set "args="
+          if "%GITHUB_EVENT_NAME%"=="workflow_dispatch" set "args=--manual"
+          set "symbol=%MT5_SYMBOL%"
+          if not "%symbol%"=="" set "args=%args% --symbol %symbol%"
           
-          $ws = $env:GITHUB_WORKSPACE
-          $cmd = "python $ws\06-程序脚本-scripts\run_observation_mt5.py $args"
-          Write-Host "Running: $cmd"
+          python "06-程序脚本-scripts\run_observation_mt5.py" %args% > observation-output.json 2>&1
+          set "exitCode=%ERRORLEVEL%"
           
-          $output = & cmd /c $cmd 2>&1
-          $exitCode = $LASTEXITCODE
+          type observation-output.json
           
-          $output | Out-File -Encoding utf8 observation-output.json
-          $output
-          
-          echo "exit_code=$exitCode" >> $env:GITHUB_OUTPUT
-          exit $exitCode
+          echo exit_code=%exitCode% >> %GITHUB_OUTPUT%
+          exit /b %exitCode%
       - name: Write run summary
         if: always()
         shell: powershell
