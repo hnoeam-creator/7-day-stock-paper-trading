@@ -14,7 +14,14 @@ if sys.platform == "win32":
 else:
     import fcntl
 # Add project root to path
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+scripts_dir = str(Path(__file__).resolve().parent)
+sys.path.insert(0, scripts_dir)
+print(f"DEBUG: scripts_dir = {scripts_dir}")
+print(f"DEBUG: sys.path[0] = {sys.path[0]}")
+print(f"DEBUG: files in scripts_dir = {list(Path(scripts_dir).glob('*.py'))}")
+
+from mt5_readiness_check import CONFIG as MT5_CONFIG, ROOT, check_mt5, load_config as load_mt5_config, update_readiness as update_mt5_readiness
+
 from mt5_readiness_check import CONFIG as MT5_CONFIG, ROOT, check_mt5, load_config as load_mt5_config, update_readiness as update_mt5_readiness
 from run_store import RunStore, utc_now
 STARTUP = ("AGENTS.md", "AGENTS.zh-CN.md", "02-项目文档-docs/TRADING-STRATEGY.md", "02-项目文档-docs/TRADING-STRATEGY.zh-CN.md",
