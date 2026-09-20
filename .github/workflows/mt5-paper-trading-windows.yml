@@ -67,9 +67,10 @@ jobs:
           echo MT5_PASSWORD=*** >> "%envPath%"
           echo MT5_SERVER=%MT5_SERVER% >> "%envPath%"
           if not "%MT5_PATH%"=="" echo MT5_PATH=%MT5_PATH% >> "%envPath%"
-      - name: Validate project files
-        shell: cmd
-        run: |
+       - name: Validate project files
+         shell: cmd
+         run: |
+          chcp 65001 > nul
           python validate_project.py
       - name: Run MT5 observation
         id: observation
