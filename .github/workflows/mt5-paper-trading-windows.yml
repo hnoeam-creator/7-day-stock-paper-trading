@@ -1,0 +1,219 @@
+name: 7-day MT5 paper trading observation (Windows self-hosted)
+on:
+  workflow_dispatch:
+    inputs:
+      mt5_symbol:
+        description: MT5 symbol to check (e.g., EURUSD, XAUUSD, US500)
+        required: false
+        default: "EURUSD"
+      run_paper_decision:
+        description: Also run a paper trading decision after observation
+        required: false
+        default: "false"
+      decision_file:
+        description: Path to paper trading decision JSON file (if run_paper_decision=true)
+        required: false
+        default: ""
+  schedule:
+    - cron: "45 12 * * 1-5"
+    - cron: "35 13 * * 1-5"
+    - cron: "0 16 * * 1-5"
+    - cron: "0 18 * * 1-5"
+    - cron: "15 19 * * 1-5"
+    - cron: "45 19 * * 1-5"
+permissions:
+  contents: read
+concurrency:
+  group: mt5-paper-trading-observation
+  cancel-in-progress: false
+jobs:
+  observe:
+    runs-on: [self-hosted, windows, windows-mt5]
+    timeout-minutes: 15
+    env:
+      MT5_LOGIN: ${{ secrets.MT5_LOGIN }}
+      MT5_PASSWORD: ${{ secrets.MT5_PASSWORD }}
+      MT5_SERVER: ${{ secrets.MT5_SERVER }}
+      MT5_PATH: ${{ secrets.MT5_PATH }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+    steps:
+      - name: Check out project
+        uses: actions/checkout@v7
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+          architecture: "x64"
+      - name: Validate required secrets
+        shell: pwsh
+        run: |
+          $missing = @()
+          if (-not $env:MT5_LOGIN) { $missing += "MT5_LOGIN" }
+          if (-not $env:MT5_PASSWORD) { $missing += "MT5_PASSWORD" }
+          if (-not $env:MT5_SERVER) { $missing += "MT5_SERVER" }
+          if ($missing.Count -gt 0) {
+            Write-Error "Missing required MT5 secrets in GitHub Secrets: $($missing -join ', ')"
+            exit 1
+          }
+      - name: Create temporary MT5 runtime configuration
+        shell: pwsh
+        run: |
+          $envPath = "09-API密钥-仅本地/mt5-api.env"
+          $content = @()
+          $content += "MT5_LOGIN=$env:MT5_LOGIN"
+          $content += "MT5_PASSWORD=$env:M...ORD"
+          $content += "MT5_SERVER=$env:MT5_SERVER"
+          if ($env:MT5_PATH) { $content += "MT5_PATH=$env:MT5_PATH" }
+          [System.IO.File]::WriteAllLines($envPath, $content, [System.Text.Encoding]::UTF8)
+      - name: Validate project files
+        shell: pwsh
+        run: |
+          python -m json.tool 03-定时任务-routines/schedule.json | Out-Null
+          python -m json.tool 04-运行状态-state/readiness.json | Out-Null
+          python -m json.tool 05-交易记录-data/current-state-mt5.json | Out-Null
+          python 06-程序脚本-scripts/mt5_readiness_check.py --check-config
+      - name: Run MT5 observation
+        id: observation
+        shell: pwsh
+        run: |
+          $isManual = "${{ github.event_name }}" -eq "workflow_dispatch"
+          $args = if ($isManual) { "--manual" } else { "" }
+          $symbol = "${{ github.event.inputs.mt5_symbol }}"
+          if ($symbol) { $args += " --symbol $symbol" }
+          
+          $cmd = "python 06-程序脚本-scripts/run_observation_mt5.py $args"
+          Write-Host "Running: $cmd"
+          
+          $output = & cmd /c $cmd 2>&1
+          $exitCode = $LASTEXITCODE
+          
+          $output | Out-File -Encoding utf8 observation-output.json
+          $output
+          
+          echo "exit_code=$exitCode" >> $env:GITHUB_OUTPUT
+          exit $exitCode
+      - name: Write run summary
+        if: always()
+        shell: pwsh
+        run: |
+          $symbol = "${{ github.event.inputs.mt5_symbol }}"
+          $result = "${{ steps.observation.outputs.exit_code || 'not-run' }}"
+          $trigger = "${{ github.event_name }}"
+          
+          $lines = @(
+            "## 7 天 MT5 Paper Trading 觀察實驗",
+            "",
+            "- 模式：僅 paper trading / 只讀 MT5 驗證 (Pepperstone Demo)",
+            "- 觸發方式：" + $trigger,
+            "- 運行結果：" + $result,
+            "- 真實訂單：禁止",
+            "- 符號：" + $symbol,
+            ""
+          )
+          
+          if (Test-Path "observation-output.json") {
+            $json = Get-Content observation-output.json -Raw
+            $lines += "### 輸出詳細"
+            $lines += "```json"
+            $lines += $json
+            $lines += "```"
+          }
+          
+          $summary = $lines -join "`n"
+          $summary | Out-File -Encoding utf8 -Append $env:GITHUB_STEP_SUMMARY
+      - name: Send optional Telegram notification
+        if: always()
+        shell: pwsh
+        run: |
+          if (-not $env:TELEGRAM_BOT_TOKEN -or -not $env:TELEGRAM_CHAT_ID) {
+            Write-Host "Telegram notification not configured; skipping."
+            exit 0
+          }
+          $result = "${{ steps.observation.outputs.exit_code || 'not-run' }}"
+          $symbol = "${{ github.event.inputs.mt5_symbol }}"
+          $message = "7天 MT5 實驗：GitHub Actions (Windows) 已運行。模式=paper trading only，符號=$symbol，結果碼=$result，真實訂單=禁止。詳情請查看 Actions 記錄。"
+          try {
+            $response = Invoke-RestMethod `
+              -Uri "https://api.telegram.org/bot$env:TELEGRAM_BOT_TOKEN/sendMessage" `
+              -Method Post `
+              -Body @{ chat_id = $env:TELEGRAM_CHAT_ID; text = $message } `
+              -ErrorAction Stop
+            Write-Host "Telegram notification sent."
+          } catch {
+            Write-Warning "Failed to send Telegram notification: $($_.Exception.Message)"
+          }
+      - name: Remove temporary credentials
+        if: always()
+        shell: pwsh
+        run: |
+          Remove-Item -Path "09-API密钥-仅本地/mt5-api.env" -Force -ErrorAction SilentlyContinue
+      - name: Upload non-secret run records
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: mt5-paper-trading-record-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            observation-output.json
+            04-运行状态-state/readiness.json
+            05-交易记录-data/current-state-mt5.json
+            05-交易记录-data/journal/*.md
+            05-交易记录-data/evidence/*.json
+            05-交易记录-data/paper-ledger-mt5.json
+  paper-decision:
+    needs: observe
+    if: github.event_name == 'workflow_dispatch' && inputs.run_paper_decision == 'true'
+    runs-on: [self-hosted, windows, windows-mt5]
+    timeout-minutes: 10
+    env:
+      MT5_LOGIN: ${{ secrets.MT5_LOGIN }}
+      MT5_PASSWORD: ${{ secrets.MT5_PASSWORD }}
+      MT5_SERVER: ${{ secrets.MT5_SERVER }}
+      MT5_PATH: ${{ secrets.MT5_PATH }}
+    steps:
+      - name: Check out project
+        uses: actions/checkout@v7
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+          architecture: "x64"
+      - name: Create temporary MT5 runtime configuration
+        shell: pwsh
+        run: |
+          $envPath = "09-API密钥-仅本地/mt5-api.env"
+          $content = @()
+          $content += "MT5_LOGIN=$env:MT5_LOGIN"
+          $content += "MT5_PASSWORD=***
+          $content += "MT5_SERVER=$env:MT5_SERVER"
+          if ($env:MT5_PATH) { $content += "MT5_PATH=$env:MT5_PATH" }
+          [System.IO.File]::WriteAllLines($envPath, $content, [System.Text.Encoding]::UTF8)
+      - name: Run paper trading decision
+        shell: pwsh
+        run: |
+          $decisionPath = "${{ github.event.inputs.decision_file }}"
+          if (-not $decisionPath -or -not (Test-Path $decisionPath)) {
+            Write-Error "Decision file not found: $decisionPath"
+            exit 1
+          }
+          $runId = "gha_mt5_${{ github.run_id }}_${{ github.run_attempt }}"
+          python 06-程序脚本-scripts/paper_engine_mt5.py --decision $decisionPath --run-id $runId
+      - name: Remove temporary credentials
+        if: always()
+        shell: pwsh
+        run: |
+          Remove-Item -Path "09-API密钥-仅本地/mt5-api.env" -Force -ErrorAction SilentlyContinue
+      - name: Upload paper decision records
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: mt5-paper-trading-decision-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            05-交易记录-data/current-state-mt5.json
+            05-交易记录-data/journal/*.md
+            05-交易记录-data/evidence/*.json
+            05-交易记录-data/paper-ledger-mt5.json
