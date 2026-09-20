@@ -67,14 +67,13 @@ jobs:
           echo MT5_PASSWORD=*** >> "%envPath%"
           echo MT5_SERVER=%MT5_SERVER% >> "%envPath%"
           if not "%MT5_PATH%"=="" echo MT5_PATH=%MT5_PATH% >> "%envPath%"
-      - name: Validate project files
-        shell: powershell
+     - name: Validate project files
+        shell: cmd
         run: |
-          $ws = $env:GITHUB_WORKSPACE
-          python -m json.tool "$ws\03-定时任务-routines\schedule.json" > $null
-          python -m json.tool "$ws\04-运行状态-state\readiness.json" > $null
-          python -m json.tool "$ws\05-交易记录-data\current-state-mt5.json" > $null
-          python "$ws\06-程序脚本-scripts\mt5_readiness_check.py" --check-config
+          python -m json.tool "03-定时任务-routines\schedule.json" > nul
+          python -m json.tool "04-运行状态-state\readiness.json" > nul
+          python -m json.tool "05-交易记录-data\current-state-mt5.json" > nul
+          python "06-程序脚本-scripts\mt5_readiness_check.py" --check-config
       - name: Run MT5 observation
         id: observation
         shell: powershell
