@@ -19,16 +19,12 @@ def find_dirs(base, prefix):
     dirs = glob.glob(pattern)
     return [d for d in dirs if os.path.isdir(d)]
 def list_files_in_dir(directory):
-    """List all files in a directory recursively."""
-    files = []
-    for root, dirs, files in os.walk(directory):
-        for f in files:
-            rel_root = os.path.relpath(root, os.path.dirname(directory))
-            if rel_root == '.':
-                files.append(f)
-            else:
-                files.append(os.path.join(rel_root, f))
-    return files
+    """List all files in a directory (non-recursive)."""
+    try:
+        return [f for f in os.listdir(directory) if os.path.isfile(os.path.join(directory, f))]
+    except Exception as e:
+        print(f"Error listing {directory}: {e}")
+        return []
 def find_file_in_dirs(dirs, filename):
     """Find file in list of directories."""
     for d in dirs:
@@ -54,13 +50,21 @@ def main():
     # List ALL files in 05- and 06- directories for debugging
     if dirs_05:
         print(f"\nFiles in 05- directory:")
-        for f in list_files_in_dir(dirs_05[0]):
-            print(f"  {f}")
+        for f in os.listdir(dirs_05[0]):
+            full = os.path.join(dirs_05[0], f)
+            if os.path.isfile(full):
+                print(f"  FILE: {f}")
+            elif os.path.isdir(full):
+                print(f"  DIR:  {f}")
     
     if dirs_06:
         print(f"\nFiles in 06- directory:")
-        for f in list_files_in_dir(dirs_06[0]):
-            print(f"  {f}")
+        for f in os.listdir(dirs_06[0]):
+            full = os.path.join(dirs_06[0], f)
+            if os.path.isfile(full):
+                print(f"  FILE: {f}")
+            elif os.path.isdir(full):
+                print(f"  DIR:  {f}")
     
     # Find files
     dirs_03 = find_dirs(base, '03-')
