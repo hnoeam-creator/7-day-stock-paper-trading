@@ -68,34 +68,29 @@ jobs:
           echo MT5_SERVER=%MT5_SERVER% >> "%envPath%"
           if not "%MT5_PATH%"=="" echo MT5_PATH=%MT5_PATH% >> "%envPath%"
       - name: Validate project files
-        shell: powershell
+        shell: cmd
         run: |
-          $ws = $env:GITHUB_WORKSPACE
-          python -m json.tool "$ws\03-定时任务-routines\schedule.json" | Out-Null
-          python -m json.tool "$ws\04-运行状态-state\readiness.json" | Out-Null
-          python -m json.tool "$ws\05-交易记录-data\current-state-mt5.json" | Out-Null
-          python "$ws\06-程序脚本-scripts\mt5_readiness_check.py" --check-config
+          python -m json.tool "03-定时任务-routines\schedule.json" | Out-Null
+          python -m json.tool "04-运行状态-state\readiness.json" | Out-Null
+          python -m json.tool "05-交易记录-data\current-state-mt5.json" | Out-Null
+          python "06-程序脚本-scripts\mt5_readiness_check.py" --check-config
       - name: Run MT5 observation
         id: observation
-        shell: powershell
+        shell: cmd
         run: |
-          $isManual = "${{ github.event_name }}" -eq "workflow_dispatch"
-          $args = if ($isManual) { "--manual" } else { "" }
-          $symbol = "${{ github.event.inputs.mt5_symbol }}"
-          if ($symbol) { $args += " --symbol $symbol" }
+          set "isManual=%GITHUB_EVENT_NAME%"
+          set "args="
+          if "%GITHUB_EVENT_NAME%"=="workflow_dispatch" set "args=--manual"
+          set "symbol=%MT5_SYMBOL%"
+          if not "%symbol%"=="" set "args=%args% --symbol %symbol%"
           
-          $ws = $env:GITHUB_WORKSPACE
-          $cmd = "python $ws\06-程序脚本-scripts\run_observation_mt5.py $args"
-          Write-Host "Running: $cmd"
+          python "06-程序脚本-scripts\run_observation_mt5.py" %args% > observation-output.json 2>&1
+          set "exitCode=%ERRORLEVEL%"
           
-          $output = & cmd /c $cmd 2>&1
-          $exitCode = $LASTEXITCODE
+          type observation-output.json
           
-          $output | Out-File -Encoding utf8 observation-output.json
-          $output
-          
-          echo "exit_code=$exitCode" >> $env:GITHUB_OUTPUT
-          exit $exitCode
+          echo exit_code=%exitCode% >> %GITHUB_OUTPUT%
+          exit /b %exitCode%
       - name: Write run summary
         if: always()
         shell: powershell
@@ -160,11 +155,11 @@ jobs:
           retention-days: 14
           path: |
             observation-output.json
-            04-运行状态-state/readiness.json
-            05-交易记录-data/current-state-mt5.json
-            05-交易记录-data/journal/*.md
-            05-交易记录-data/evidence/*.json
-            05-交易记录-data/paper-ledger-mt5.json
+            04-运行状态-state\readiness.json
+            05-交易记录-data\current-state-mt5.json
+            05-交易记录-data\journal\*.md
+            05-交易记录-data\evidence\*.json
+            05-交易记录-data\paper-ledger-mt5.json
   paper-decision:
     needs: observe
     if: github.event_name == 'workflow_dispatch' && inputs.run_paper_decision == 'true'
@@ -200,17 +195,14 @@ jobs:
           python-version: "3.11"
           architecture: "x64"
       - name: Run paper trading decision
-        shell: powershell
+        shell: cmd
         run: |
-          $decisionPath = "${{ github.event.inputs.decision_file }}"
-          if (-not $decisionPath -or -not (Test-Path $decisionPath)) {
-            Write-Error "Decision file not found: $decisionPath"
-            exit 1
-          }
-          $ws = $env:GITHUB_WORKSPACE
-          $runId = "gha_mt5_${{ github.run_id }}_${{ github.run_attempt }}"
-          $cmd = "python $ws\06-程序脚本-scripts\paper_engine_mt5.py --decision $decisionPath --run-id $runId"
-          & cmd /c $cmd
+          set "decisionPath=%DECISION_FILE%"
+          if "%decisionPath%"=="" exit /b 1
+          if not exist "%decisionPath%" exit /b 1
+          
+          set "runId=gha_mt5_%GITHUB_RUN_ID%_%GITHUB_RUN_ATTEMPT%"
+          python "06-程序脚本-scripts\paper_engine_mt5.py" --decision "%decisionPath%" --run-id "%runId%"
       - name: Remove temporary credentials
         if: always()
         shell: powershell
@@ -224,7 +216,7 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
           path: |
-            05-交易记录-data/current-state-mt5.json
-            05-交易记录-data/journal/*.md
-            05-交易记录-data/evidence/*.json
-            05-交易记录-data/paper-ledger-mt5.json
+            05-交易记录-data\current-state-mt5.json
+            05-交易记录-data\journal\*.md
+            05-交易记录-data\evidence\*.json
+            05-交易记录-data\paper-ledger-mt5.json
