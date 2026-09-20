@@ -42,7 +42,7 @@ jobs:
         uses: actions/checkout@v7
       - name: Configure PowerShell execution policy
         shell: cmd
-        run: powershell.exe -ExecutionPolicy Bypass -Command "Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force"
+        run: powershell.exe -ExecutionPolicy Bypass -Command "Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process -Force"
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
@@ -105,19 +105,19 @@ jobs:
           $trigger = "${{ github.event_name }}"
           
           $lines = @(
-            "## 7 天 MT5 Paper Trading 觀察實驗",
+            "## 7-day MT5 Paper Trading Observation",
             "",
-            "- 模式：僅 paper trading / 只讀 MT5 驗證 (Pepperstone Demo)",
-            "- 觸發方式：" + $trigger,
-            "- 運行結果：" + $result,
-            "- 真實訂單：禁止",
-            "- 符號：" + $symbol,
+            "- Mode: Paper trading only / MT5 read-only verification (Pepperstone Demo)",
+            "- Trigger: " + $trigger,
+            "- Result: " + $result,
+            "- Live orders: Disabled",
+            "- Symbol: " + $symbol,
             ""
           )
           
           if (Test-Path "observation-output.json") {
             $json = Get-Content observation-output.json -Raw
-            $lines += "### 輸出詳細"
+            $lines += "### Output Details"
             $lines += "```json"
             $lines += $json
             $lines += "```"
@@ -135,7 +135,7 @@ jobs:
           }
           $result = "${{ steps.observation.outputs.exit_code || 'not-run' }}"
           $symbol = "${{ github.event.inputs.mt5_symbol }}"
-          $message = "7天 MT5 實驗：GitHub Actions (Windows) 已運行。模式=paper trading only，符號=$symbol，結果碼=$result，真實訂單=禁止。詳情請查看 Actions 記錄。"
+          $message = "7-day MT5 Experiment: GitHub Actions (Windows) completed. Mode=paper trading only, Symbol=$symbol, ExitCode=$result, Live orders=Disabled. Check Actions for details."
           try {
             $response = Invoke-RestMethod `
               -Uri "https://api.telegram.org/bot$env:TELEGRAM_BOT_TOKEN/sendMessage" `
@@ -180,7 +180,7 @@ jobs:
         uses: actions/checkout@v7
       - name: Configure PowerShell execution policy
         shell: cmd
-        run: powershell.exe -ExecutionPolicy Bypass -Command "Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force"
+        run: powershell.exe -ExecutionPolicy Bypass -Command "Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process -Force"
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
@@ -192,7 +192,7 @@ jobs:
           $envPath = "09-API密钥-仅本地/mt5-api.env"
           $content = @()
           $content += "MT5_LOGIN=$env:MT5_LOGIN"
-          $content += "MT5_PASSWORD=***
+          $content += "MT5_PASSWORD=$env:M...ORD"
           $content += "MT5_SERVER=$env:MT5_SERVER"
           if ($env:MT5_PATH) { $content += "MT5_PATH=$env:MT5_PATH" }
           [System.IO.File]::WriteAllLines($envPath, $content, [System.Text.Encoding]::UTF8)
